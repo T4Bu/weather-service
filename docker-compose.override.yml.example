@@ -1,0 +1,24 @@
+version: '3.8'
+
+# This is an example override file for docker-compose.yml
+# Copy this to docker-compose.override.yml and customize as needed
+# It will be automatically used when you run 'docker-compose up'
+
+services:
+  weather-service:
+    environment:
+      # Customize these environment variables
+      - PORT=8080
+      - UPDATE_INTERVAL=5m
+      - ENABLE_RATE_LIMIT=true
+      # Override these with your actual API keys
+      - OPENWEATHERMAP_API_KEY=your_openweathermap_key_here
+      - WEATHERAPI_KEY=your_weatherapi_key_here
+    # Uncomment to map volume for easier config updates without rebuilds
+    # volumes:
+    #   - ./my-custom-config.json:/app/config.json:ro
+    # Uncomment to use a custom config file
+    # command: /app/weather-service -config=my-custom-config.json
+    # Uncomment to expose the service on a different port
+    # ports:
+    #   - "9090:8080" 

@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+/weather-service
+/rate_limit_test
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files (these will be injected at runtime)
+.env
+.env.*
+
+# Documentation
+*.md
+LICENSE
+README.md
+
+# Testing
+*_test.go
+testdata/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore 
