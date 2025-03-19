@@ -43,8 +43,9 @@ type Config struct {
 	Locations []string `json:"locations"`
 }
 
-// LoadConfig loads configuration from a JSON file
+// LoadConfig loads configuration from a JSON file and environment variables
 func LoadConfig(filename string) (*Config, error) {
+	// Load base configuration from JSON file
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -55,6 +56,14 @@ func LoadConfig(filename string) (*Config, error) {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
 		return nil, err
+	}
+
+	// Override API keys with environment variables if they exist
+	if apiKey := os.Getenv("OPENWEATHERMAP_API_KEY"); apiKey != "" {
+		config.OpenWeatherMap.APIKey = apiKey
+	}
+	if apiKey := os.Getenv("WEATHERAPI_KEY"); apiKey != "" {
+		config.WeatherAPI.APIKey = apiKey
 	}
 
 	return &config, nil

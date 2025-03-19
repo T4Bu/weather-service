@@ -1,11 +1,9 @@
 {
   "openWeatherMap": {
-    "enabled": true,
-    "apiKey": "your-openweathermap-api-key"
+    "enabled": false
   },
   "weatherAPI": {
-    "enabled": true,
-    "apiKey": "your-weatherapi-key"
+    "enabled": true
   },
   "locations": [
     "London,UK",

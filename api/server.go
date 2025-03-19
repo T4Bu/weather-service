@@ -82,6 +82,7 @@ type Server struct {
 	forecastStore   *ForecastStore
 	server          *http.Server
 	forecastSources []datasource.ForecastSource
+	apiKeys         map[string]bool // Store valid API keys
 }
 
 // NewServer creates a new API server
@@ -91,20 +92,19 @@ func NewServer(weatherStore *WeatherStore, forecastStore *ForecastStore, port in
 	server := &Server{
 		weatherStore:  weatherStore,
 		forecastStore: forecastStore,
+		apiKeys:       make(map[string]bool),
 		server: &http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,
 		},
 	}
 
-	// Register handlers for current weather
-	mux.HandleFunc("/api/weather/location/", server.handleGetWeatherByLocation)
-	mux.HandleFunc("/api/weather/locations", server.handleGetAllLocations)
+	// Register handlers with authentication middleware
+	mux.HandleFunc("/api/weather/location/", server.withAuth(server.handleGetWeatherByLocation))
+	mux.HandleFunc("/api/weather/locations", server.withAuth(server.handleGetAllLocations))
+	mux.HandleFunc("/api/forecast/location/", server.withAuth(server.handleGetForecastByLocation))
 
-	// Register handlers for forecasts
-	mux.HandleFunc("/api/forecast/location/", server.handleGetForecastByLocation)
-
-	// Health check
+	// Health check doesn't need authentication
 	mux.HandleFunc("/api/health", server.handleHealthCheck)
 
 	return server
@@ -119,6 +119,39 @@ func (s *Server) RegisterForecastSources(sources []datasource.ForecastSource) {
 func (s *Server) Start() error {
 	fmt.Printf("Starting API server on %s\n", s.server.Addr)
 	return s.server.ListenAndServe()
+}
+
+// AddAPIKey adds a valid API key to the server
+func (s *Server) AddAPIKey(key string) {
+	s.apiKeys[key] = true
+}
+
+// RemoveAPIKey removes an API key from the server
+func (s *Server) RemoveAPIKey(key string) {
+	delete(s.apiKeys, key)
+}
+
+// withAuth wraps an http.HandlerFunc with API key authentication
+func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get API key from header or query parameter
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey == "" {
+			apiKey = r.URL.Query().Get("api_key")
+		}
+
+		// Check if API key is valid
+		if !s.apiKeys[apiKey] {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Invalid or missing API key",
+			})
+			return
+		}
+
+		next(w, r)
+	}
 }
 
 // handleGetWeatherByLocation handles requests for weather data by location

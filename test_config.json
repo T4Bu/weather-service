@@ -1,7 +1,7 @@
 {
   "openWeatherMap": {
     "enabled": true,
-    "apiKey": "dfa938699949ccf09541a5cff88040dd"
+    "apiKey": "1f1a66380ceae4699ff6e6f2f3b67ba4"
   },
   "weatherAPI": {
     "enabled": false,

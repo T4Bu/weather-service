@@ -13,9 +13,16 @@ import (
 
 	"weather-service/api"
 	"weather-service/datasource"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
 	// Parse command line arguments
 	port := flag.Int("port", 8080, "Port to run the server on")
 	updateInterval := flag.Duration("update", 5*time.Minute, "Weather data update interval")
@@ -37,6 +44,7 @@ func main() {
 		if config.OpenWeatherMap.APIKey == "" {
 			log.Fatal("OpenWeatherMap is enabled but no API key provided")
 		}
+		log.Printf("Using OpenWeatherMap API key: %s", config.OpenWeatherMap.APIKey)
 		owmProvider := datasource.NewOpenWeatherMapProvider(config.OpenWeatherMap.APIKey)
 
 		// Apply rate limiting if enabled
@@ -57,6 +65,7 @@ func main() {
 		if config.WeatherAPI.APIKey == "" {
 			log.Fatal("WeatherAPI is enabled but no API key provided")
 		}
+		log.Printf("Using WeatherAPI API key: %s", config.WeatherAPI.APIKey)
 		wapiProvider := datasource.NewWeatherAPIProvider(config.WeatherAPI.APIKey)
 
 		// Apply rate limiting if enabled

@@ -5,6 +5,12 @@
 .env.test
 .env.production
 
+# Configuration files with sensitive data
+*config.json
+*config.yaml
+*config.yml
+*config.toml
+
 # Build artifacts
 /weather-service
 *.exe
