@@ -85,6 +85,15 @@ type Server struct {
 	apiKeys         map[string]bool // Store valid API keys
 }
 
+// APIEndpoint represents an API endpoint with its documentation
+type APIEndpoint struct {
+	Path        string `json:"path"`        // Endpoint path
+	Method      string `json:"method"`      // HTTP method
+	Description string `json:"description"` // Description of what the endpoint does
+	Parameters  string `json:"parameters"`  // Parameters details
+	Example     string `json:"example"`     // Example usage
+}
+
 // NewServer creates a new API server
 func NewServer(weatherStore *WeatherStore, forecastStore *ForecastStore, port int) *Server {
 	mux := http.NewServeMux()
@@ -100,12 +109,13 @@ func NewServer(weatherStore *WeatherStore, forecastStore *ForecastStore, port in
 	}
 
 	// Register handlers with authentication middleware
-	mux.HandleFunc("/api/weather/location/", server.withAuth(server.handleGetWeatherByLocation))
-	mux.HandleFunc("/api/weather/locations", server.withAuth(server.handleGetAllLocations))
-	mux.HandleFunc("/api/forecast/location/", server.withAuth(server.handleGetForecastByLocation))
+	mux.HandleFunc("/weather/location/", server.withAuth(server.handleGetWeatherByLocation))
+	mux.HandleFunc("/weather/locations", server.withAuth(server.handleGetAllLocations))
+	mux.HandleFunc("/forecast/location/", server.withAuth(server.handleGetForecastByLocation))
 
-	// Health check doesn't need authentication
-	mux.HandleFunc("/api/health", server.handleHealthCheck)
+	// Public endpoints without authentication
+	mux.HandleFunc("/health", server.handleHealthCheck)
+	mux.HandleFunc("/discovery", server.handleDiscovery)
 
 	return server
 }
@@ -134,22 +144,7 @@ func (s *Server) RemoveAPIKey(key string) {
 // withAuth wraps an http.HandlerFunc with API key authentication
 func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get API key from header or query parameter
-		apiKey := r.Header.Get("X-API-Key")
-		if apiKey == "" {
-			apiKey = r.URL.Query().Get("api_key")
-		}
-
-		// Check if API key is valid
-		if !s.apiKeys[apiKey] {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error": "Invalid or missing API key",
-			})
-			return
-		}
-
+		// Authentication removed - all requests are allowed
 		next(w, r)
 	}
 }
@@ -163,12 +158,12 @@ func (s *Server) handleGetWeatherByLocation(w http.ResponseWriter, r *http.Reque
 
 	// Extract location from URL path
 	path := r.URL.Path
-	if len(path) <= len("/api/weather/location/") {
+	if len(path) <= len("/weather/location/") {
 		http.Error(w, "Location not specified", http.StatusBadRequest)
 		return
 	}
 
-	location := path[len("/api/weather/location/"):]
+	location := path[len("/weather/location/"):]
 	data, exists := s.weatherStore.GetWeatherByLocation(location)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -208,6 +203,73 @@ func (s *Server) handleGetAllLocations(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleDiscovery provides API documentation and available endpoints
+func (s *Server) handleDiscovery(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// List of all API endpoints with their documentation
+	endpoints := []APIEndpoint{
+		{
+			Path:        "/health",
+			Method:      "GET",
+			Description: "Check if the API is up and running",
+			Parameters:  "None",
+			Example:     "/health",
+		},
+		{
+			Path:        "/discovery",
+			Method:      "GET",
+			Description: "Get a list of all available API endpoints",
+			Parameters:  "None",
+			Example:     "/discovery",
+		},
+		{
+			Path:        "/weather/locations",
+			Method:      "GET",
+			Description: "Get a list of all locations with available weather data",
+			Parameters:  "None",
+			Example:     "/weather/locations",
+		},
+		{
+			Path:        "/weather/location/{location}",
+			Method:      "GET",
+			Description: "Get current weather data for a specific location",
+			Parameters:  "{location} - City name and country code (e.g., London,UK)",
+			Example:     "/weather/location/London,UK",
+		},
+		{
+			Path:        "/forecast/location/{location}",
+			Method:      "GET",
+			Description: "Get forecast data for a specific location",
+			Parameters:  "{location} - City name and country code (e.g., London,UK), ?days=n (optional, default=3)",
+			Example:     "/forecast/location/London,UK?days=5",
+		},
+		{
+			Path:        "/forecast/location/{location}/{provider}",
+			Method:      "GET",
+			Description: "Get forecast data for a specific location from a specific provider",
+			Parameters:  "{location} - City name and country code, {provider} - Provider name (e.g., WeatherAPI)",
+			Example:     "/forecast/location/London,UK/WeatherAPI",
+		},
+	}
+
+	// Information about the API
+	apiInfo := map[string]interface{}{
+		"name":        "Weather Service API",
+		"version":     "1.0.0",
+		"description": "API for fetching weather and forecast data from various providers",
+		"endpoints":   endpoints,
+		"basePath":    fmt.Sprintf("http://%s", r.Host),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(apiInfo)
+}
+
 // handleGetForecastByLocation handles requests for forecast data by location
 func (s *Server) handleGetForecastByLocation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -217,7 +279,7 @@ func (s *Server) handleGetForecastByLocation(w http.ResponseWriter, r *http.Requ
 
 	// Extract location from URL path
 	path := r.URL.Path
-	if len(path) <= len("/api/forecast/location/") {
+	if len(path) <= len("/forecast/location/") {
 		http.Error(w, "Location not specified", http.StatusBadRequest)
 		return
 	}
@@ -235,7 +297,7 @@ func (s *Server) handleGetForecastByLocation(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Extract any path parameters after location
-	pathParts := strings.Split(path[len("/api/forecast/location/"):], "/")
+	pathParts := strings.Split(path[len("/forecast/location/"):], "/")
 	location := pathParts[0]
 
 	// Fetch from specific provider if specified

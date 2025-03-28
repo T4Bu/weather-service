@@ -1,0 +1,22 @@
+services:
+  weather-service:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./config.json:/config.json
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.weather-service.rule=Host(`weather.localhost`)"
+      - "traefik.http.services.weather-service.loadbalancer.server.port=8080"
+      # API Gateway configuration
+      - "traefik.http.routers.weather-api.rule=PathPrefix(`/api/weather`)"
+      - "traefik.http.middlewares.weather-strip.stripprefix.prefixes=/api/weather"
+      - "traefik.http.routers.weather-api.middlewares=weather-strip"
+    networks:
+      - traefik-gateway
+
+networks:
+  traefik-gateway:
+    external: true
