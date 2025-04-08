@@ -54,6 +54,10 @@ type OpenWeatherMapResponse struct {
 	} `json:"weather"`
 	Name string `json:"name"`
 	Dt   int64  `json:"dt"`
+	Sys  struct {
+		Sunrise int64 `json:"sunrise"`
+		Sunset  int64 `json:"sunset"`
+	} `json:"sys"`
 }
 
 // FetchWeatherData fetches weather data from the OpenWeatherMap API
@@ -102,6 +106,8 @@ func (o *OpenWeatherMapSource) FetchWeatherData(ctx context.Context, location st
 		Description: "",
 		Icon:        "",
 		WindDeg:     owmResp.Wind.Deg,
+		Sunrise:     time.Unix(owmResp.Sys.Sunrise, 0),
+		Sunset:      time.Unix(owmResp.Sys.Sunset, 0),
 	}
 
 	// Add the weather description and icon if available

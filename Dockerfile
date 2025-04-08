@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
@@ -12,19 +12,19 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /weather-service
+RUN CGO_ENABLED=0 GOOS=linux go build -o weather-service ./cmd/weather-service
 
-# Use a small alpine image for the final container
-FROM alpine:3.19
+# Use a minimal alpine image for the final container
+FROM alpine:latest
 
-WORKDIR /
+WORKDIR /app
 
-# Copy the binary from builder stage
-COPY --from=builder /weather-service /weather-service
-COPY --from=builder /app/config.json /config.json
+# Copy the binary from builder
+COPY --from=builder /app/weather-service .
+COPY --from=builder /app/config.json .
 
-# Expose the application port
+# Expose the port
 EXPOSE 8080
 
-# Run the binary
-ENTRYPOINT ["/weather-service"] 
+# Run the application
+CMD ["./weather-service"] 

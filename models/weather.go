@@ -16,4 +16,6 @@ type WeatherData struct {
 	Icon        string    `json:"icon"`
 	WindDeg     int       `json:"windDeg"`
 	Timestamp   time.Time `json:"timestamp"`
+	Sunrise     time.Time `json:"sunrise"`
+	Sunset      time.Time `json:"sunset"`
 }

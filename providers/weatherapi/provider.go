@@ -55,6 +55,14 @@ type WeatherAPIResponse struct {
 		} `json:"condition"`
 		LastUpdated string `json:"last_updated"`
 	} `json:"current"`
+	Forecast struct {
+		Forecastday []struct {
+			Astro struct {
+				Sunrise string `json:"sunrise"`
+				Sunset  string `json:"sunset"`
+			} `json:"astro"`
+		} `json:"forecastday"`
+	} `json:"forecast"`
 }
 
 // FetchWeatherData fetches weather data from the WeatherAPI.com API
@@ -99,6 +107,18 @@ func (w *WeatherAPISource) FetchWeatherData(ctx context.Context, location string
 		}
 	}
 
+	// Parse sunrise and sunset times
+	var sunrise, sunset time.Time
+	if len(wapiResp.Forecast.Forecastday) > 0 {
+		astro := wapiResp.Forecast.Forecastday[0].Astro
+		if t, err := time.Parse("hh:mm AM", astro.Sunrise); err == nil {
+			sunrise = t
+		}
+		if t, err := time.Parse("hh:mm AM", astro.Sunset); err == nil {
+			sunset = t
+		}
+	}
+
 	// Format the location with country if available
 	formattedLocation := location
 	if wapiResp.Location.Name != "" && wapiResp.Location.Country != "" {
@@ -117,5 +137,7 @@ func (w *WeatherAPISource) FetchWeatherData(ctx context.Context, location string
 		Pressure:    wapiResp.Current.PressureMb,
 		Description: wapiResp.Current.Condition.Text,
 		Icon:        wapiResp.Current.Condition.Icon,
+		Sunrise:     sunrise,
+		Sunset:      sunset,
 	}, nil
 }

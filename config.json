@@ -1,16 +1,18 @@
 {
   "openWeatherMap": {
-    "enabled": false
+    "enabled": true,
+    "apiKey": ""
   },
   "weatherAPI": {
-    "enabled": true
+    "enabled": true,
+    "apiKey": ""
   },
   "locations": [
     "London,UK",
-    "New York,US",
-    "Tokyo,JP",
-    "Sydney,AU",
-    "Paris,FR",
-    "Houston,US"
+    "New York,United States of America",
+    "Tokyo,Japan",
+    "Paris,France",
+    "Sydney,Australia",
+    "Houston,United States of America"
   ]
 } 
